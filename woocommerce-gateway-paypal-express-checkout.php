@@ -52,10 +52,6 @@ if ( file_exists( dirname( __FILE__ ) . '/includes/class-wc-gateway-ppec-rest-bo
 	require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-ppec-rest-bootstrap.php';
 }
 
-// Load test configuration (only in debug mode)
-if ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( dirname( __FILE__ ) . '/includes/test-rest-config.php' ) ) {
-	require_once dirname( __FILE__ ) . '/includes/test-rest-config.php';
-}
 
 /**
  * Adds the WooCommerce Inbox option on plugin activation
