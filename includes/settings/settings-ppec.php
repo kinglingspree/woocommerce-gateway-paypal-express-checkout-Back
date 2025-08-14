@@ -110,8 +110,44 @@ $settings = array(
 		),
 	),
 
+	'rest_api_settings' => array(
+		'title'       => __( 'PayPal API Credentials', 'woocommerce-gateway-paypal-express-checkout' ),
+		'type'        => 'title',
+		'description' => __( 'Configure PayPal REST API v2 credentials for modern OAuth 2.0 authentication. This plugin now uses REST API v2 by default.', 'woocommerce-gateway-paypal-express-checkout' ),
+	),
+	'client_id' => array(
+		'title'       => __( 'Live Client ID', 'woocommerce-gateway-paypal-express-checkout' ),
+		'type'        => 'text',
+		'description' => __( 'Get your Client ID from the PayPal Developer Dashboard.', 'woocommerce-gateway-paypal-express-checkout' ),
+		'default'     => '',
+		'desc_tip'    => true,
+	),
+	'client_secret' => array(
+		'title'       => __( 'Live Client Secret', 'woocommerce-gateway-paypal-express-checkout' ),
+		'type'        => 'password',
+		'description' => __( 'Get your Client Secret from the PayPal Developer Dashboard.', 'woocommerce-gateway-paypal-express-checkout' ),
+		'default'     => '',
+		'desc_tip'    => true,
+	),
+	'sandbox_client_id' => array(
+		'title'       => __( 'Sandbox Client ID', 'woocommerce-gateway-paypal-express-checkout' ),
+		'type'        => 'text',
+		'description' => __( 'Get your Sandbox Client ID from the PayPal Developer Dashboard.', 'woocommerce-gateway-paypal-express-checkout' ),
+		'default'     => '',
+		'desc_tip'    => true,
+	),
+	'sandbox_client_secret' => array(
+		'title'       => __( 'Sandbox Client Secret', 'woocommerce-gateway-paypal-express-checkout' ),
+		'type'        => 'password',
+		'description' => __( 'Get your Sandbox Client Secret from the PayPal Developer Dashboard.', 'woocommerce-gateway-paypal-express-checkout' ),
+		'default'     => '',
+		'desc_tip'    => true,
+	),
+
+	// Legacy NVP API credentials are hidden - plugin now uses REST API v2 only
+	/*
 	'api_credentials' => array(
-		'title'       => __( 'API Credentials', 'woocommerce-gateway-paypal-express-checkout' ),
+		'title'       => __( 'Legacy NVP API Credentials', 'woocommerce-gateway-paypal-express-checkout' ),
 		'type'        => 'title',
 		'description' => $api_creds_text,
 	),
@@ -146,13 +182,13 @@ $settings = array(
 	'api_subject' => array(
 		'title'       => __( 'Live API Subject', 'woocommerce-gateway-paypal-express-checkout' ),
 		'type'        => 'text',
-		'description' => __( 'If you\'re processing transactions on behalf of someone else\'s PayPal account, enter their email address or Secure Merchant Account ID (also known as a Payer ID) here. Generally, you must have API permissions in place with the other account in order to process anything other than "sale" transactions for them.', 'woocommerce-gateway-paypal-express-checkout' ),
+		'description' => __( 'If you're processing transactions on behalf of someone else's PayPal account, enter their email address or Secure Merchant Account ID (also known as a Payer ID) here. Generally, you must have API permissions in place with the other account in order to process anything other than "sale" transactions for them.', 'woocommerce-gateway-paypal-express-checkout' ),
 		'default'     => '',
 		'desc_tip'    => true,
 		'placeholder' => __( 'Optional', 'woocommerce-gateway-paypal-express-checkout' ),
 	),
 	'sandbox_api_credentials' => array(
-		'title'       => __( 'Sandbox API Credentials', 'woocommerce-gateway-paypal-express-checkout' ),
+		'title'       => __( 'Legacy Sandbox NVP API Credentials', 'woocommerce-gateway-paypal-express-checkout' ),
 		'type'        => 'title',
 		'description' => $sandbox_api_creds_text,
 	),
@@ -187,11 +223,12 @@ $settings = array(
 	'sandbox_api_subject' => array(
 		'title'       => __( 'Sandbox API Subject', 'woocommerce-gateway-paypal-express-checkout' ),
 		'type'        => 'text',
-		'description' => __( 'If you\'re processing transactions on behalf of someone else\'s PayPal account, enter their email address or Secure Merchant Account ID (also known as a Payer ID) here. Generally, you must have API permissions in place with the other account in order to process anything other than "sale" transactions for them.', 'woocommerce-gateway-paypal-express-checkout' ),
+		'description' => __( 'If you're processing transactions on behalf of someone else's PayPal account, enter their email address or Secure Merchant Account ID (also known as a Payer ID) here. Generally, you must have API permissions in place with the other account in order to process anything other than "sale" transactions for them.', 'woocommerce-gateway-paypal-express-checkout' ),
 		'default'     => '',
 		'desc_tip'    => true,
 		'placeholder' => __( 'Optional', 'woocommerce-gateway-paypal-express-checkout' ),
 	),
+	*/
 	'paypal_hosted_settings' => array(
 		'title'       => __( 'PayPal-hosted Checkout Settings', 'woocommerce-gateway-paypal-express-checkout' ),
 		'type'        => 'title',

@@ -14,7 +14,7 @@ function woo_pp_start_checkout() {
 		$settings     = wc_gateway_ppec()->settings;
 		$client       = wc_gateway_ppec()->client;
 
-		if ( $settings->is_enabled() && $client->get_payer_id() ) {
+		if ( $settings->is_enabled() && $settings->get_active_rest_client_id() ) {
 			ob_end_clean();
 			?>
 			<script type="text/javascript">
