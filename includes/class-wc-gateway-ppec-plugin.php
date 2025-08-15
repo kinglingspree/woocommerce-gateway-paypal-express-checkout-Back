@@ -348,8 +348,7 @@ class WC_Gateway_PPEC_Plugin {
 		// Client.
 		$this->_load_client();
 
-		// Load handlers.
-		require_once $this->includes_path . 'class-wc-gateway-ppec-settings.php';
+		// Load handlers (settings already loaded in _load_client)
 		require_once $this->includes_path . 'class-wc-gateway-ppec-privacy.php';
 		require_once $this->includes_path . 'class-wc-gateway-ppec-gateway-loader.php';
 		require_once $this->includes_path . 'class-wc-gateway-ppec-admin-handler.php';
@@ -365,7 +364,9 @@ class WC_Gateway_PPEC_Plugin {
 		$this->checkout       = new WC_Gateway_PPEC_Checkout_Handler();
 		$this->cart           = new WC_Gateway_PPEC_Cart_Handler();
 		$this->ips            = new WC_Gateway_PPEC_IPS_Handler();
-		$this->client         = new WC_Gateway_PPEC_Client( $this->settings->get_active_api_credentials(), $this->settings->environment );
+		
+		// Use client factory to get appropriate client (REST or NVP)
+		$this->client         = WC_Gateway_PPEC_Client_Factory::get_client( 'plugin_init' );
 	}
 
 	/**
@@ -374,10 +375,21 @@ class WC_Gateway_PPEC_Plugin {
 	 * @since 1.1.0
 	 */
 	protected function _load_client() {
+		// First load the main settings class that REST settings extends
+		require_once $this->includes_path . 'class-wc-gateway-ppec-settings.php';
+		
+		// Then load client credential classes
 		require_once $this->includes_path . 'abstracts/abstract-wc-gateway-ppec-client-credential.php';
 		require_once $this->includes_path . 'class-wc-gateway-ppec-client-credential-certificate.php';
 		require_once $this->includes_path . 'class-wc-gateway-ppec-client-credential-signature.php';
 		require_once $this->includes_path . 'class-wc-gateway-ppec-client.php';
+		
+		// Load REST API classes (REST settings now comes after main settings)
+		require_once $this->includes_path . 'class-wc-gateway-ppec-rest-settings.php';
+		require_once $this->includes_path . 'class-wc-gateway-ppec-rest-client.php';
+		require_once $this->includes_path . 'class-wc-gateway-ppec-rest-adapter.php';
+		require_once $this->includes_path . 'class-wc-gateway-ppec-parameter-mapper.php';
+		require_once $this->includes_path . 'class-wc-gateway-ppec-client-factory.php';
 	}
 
 	/**

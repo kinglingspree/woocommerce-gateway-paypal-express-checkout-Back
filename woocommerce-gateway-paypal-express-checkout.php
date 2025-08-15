@@ -47,3 +47,8 @@ function wc_gateway_ppec() {
 }
 
 wc_gateway_ppec()->maybe_run();
+
+// Load REST API v2 integration
+if ( file_exists( dirname( __FILE__ ) . '/includes/class-wc-gateway-ppec-rest-bootstrap.php' ) ) {
+	require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-ppec-rest-bootstrap.php';
+}
