@@ -11,13 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WC_Gateway_PPEC_Client_Factory {
 
 	/**
-	 * Cached NVP client instance.
-	 *
-	 * @var WC_Gateway_PPEC_Client
-	 */
-	protected static $_nvp_client;
-
-	/**
 	 * Cached REST client instance.
 	 *
 	 * @var WC_Gateway_PPEC_REST_Client
@@ -42,7 +35,6 @@ class WC_Gateway_PPEC_Client_Factory {
 
 		// Force REST API usage - no fallback to NVP
 		if ( method_exists( $settings, 'should_use_rest_api' ) && $settings->should_use_rest_api( $context ) ) {
-			error_log( '[PayPal Debug] Forcing REST API v2 usage, no NVP fallback' );
 			return self::get_rest_adapter( $context );
 		}
 
@@ -51,20 +43,7 @@ class WC_Gateway_PPEC_Client_Factory {
 		throw new Exception( 'PayPal REST API v2 is required but not properly configured' );
 	}
 
-	/**
-	 * Get NVP client instance.
-	 *
-	 * @return WC_Gateway_PPEC_Client
-	 */
-	public static function get_nvp_client() {
-		if ( null === self::$_nvp_client ) {
-			$settings = wc_gateway_ppec()->settings;
-			$credential = self::create_nvp_credential( $settings );
-			self::$_nvp_client = new WC_Gateway_PPEC_Client( $credential, $settings->environment );
-		}
 
-		return self::$_nvp_client;
-	}
 
 	/**
 	 * Get REST client instance.
@@ -74,12 +53,10 @@ class WC_Gateway_PPEC_Client_Factory {
 	public static function get_rest_client() {
 		if ( null === self::$_rest_client ) {
 			$settings = wc_gateway_ppec()->settings;
-			error_log( '[PayPal Debug] Creating REST client, environment: ' . $settings->environment );
 			
 			try {
 				$credential = self::create_rest_credential( $settings );
 				self::$_rest_client = new WC_Gateway_PPEC_REST_Client( $credential, $settings->environment );
-				error_log( '[PayPal Debug] REST client created successfully' );
 			} catch ( Exception $e ) {
 				error_log( '[PayPal Debug] REST client creation failed: ' . $e->getMessage() );
 				throw $e; // Re-throw to prevent fallback to NVP
@@ -104,35 +81,6 @@ class WC_Gateway_PPEC_Client_Factory {
 		return self::$_rest_adapter;
 	}
 
-	/**
-	 * Create NVP credential from settings.
-	 *
-	 * @param object $settings Settings object
-	 * @return WC_Gateway_PPEC_Client_Credential
-	 */
-	protected static function create_nvp_credential( $settings ) {
-		if ( 'live' === $settings->environment ) {
-			$username = $settings->api_username;
-			$password = $settings->api_password;
-			$signature = $settings->api_signature;
-			$certificate = $settings->api_certificate;
-			$subject = $settings->api_subject;
-		} else {
-			$username = $settings->sandbox_api_username;
-			$password = $settings->sandbox_api_password;
-			$signature = $settings->sandbox_api_signature;
-			$certificate = $settings->sandbox_api_certificate;
-			$subject = $settings->sandbox_api_subject;
-		}
-
-		if ( ! empty( $signature ) ) {
-			return new WC_Gateway_PPEC_Client_Credential_Signature( $username, $password, $signature, $subject );
-		} elseif ( ! empty( $certificate ) ) {
-			return new WC_Gateway_PPEC_Client_Credential_Certificate( $username, $password, $certificate, $subject );
-		}
-
-		throw new Exception( 'No valid PayPal API credentials found' );
-	}
 
 	/**
 	 * Create REST credential from settings.
@@ -142,22 +90,18 @@ class WC_Gateway_PPEC_Client_Factory {
 	 */
 	protected static function create_rest_credential( $settings ) {
 		$environment = $settings->environment;
-		error_log( '[PayPal Debug] Creating REST credentials for environment: ' . $environment );
 		
 		if ( method_exists( $settings, 'get_current_client_id' ) ) {
 			$client_id = $settings->get_current_client_id();
 			$client_secret = $settings->get_current_client_secret();
-			error_log( '[PayPal Debug] Using get_current_client_id method' );
 		} else {
 			// Use direct property access for settings
 			if ( 'live' === $environment ) {
 				$client_id = $settings->client_id ?? '';
 				$client_secret = $settings->client_secret ?? '';
-				error_log( '[PayPal Debug] Live environment - Client ID: ' . ( ! empty( $client_id ) ? 'SET (' . strlen( $client_id ) . ' chars)' : 'EMPTY' ) );
 			} else {
 				$client_id = $settings->sandbox_client_id ?? '';
 				$client_secret = $settings->sandbox_client_secret ?? '';
-				error_log( '[PayPal Debug] Sandbox environment - Client ID: ' . ( ! empty( $client_id ) ? 'SET (' . strlen( $client_id ) . ' chars)' : 'EMPTY' ) );
 			}
 		}
 
@@ -167,48 +111,15 @@ class WC_Gateway_PPEC_Client_Factory {
 			throw new Exception( $error_msg );
 		}
 
-		error_log( '[PayPal Debug] REST credentials validated, creating OAuth credential object' );
 		return new WC_Gateway_PPEC_Client_Credential_OAuth( $client_id, $client_secret );
 	}
 
-	/**
-	 * Test client connection and credentials.
-	 *
-	 * @param string $client_type Type of client to test ('nvp' or 'rest')
-	 * @param string $environment Environment to test ('live' or 'sandbox')
-	 * @return bool|string True on success, error message on failure
-	 */
-	public static function test_client( $client_type = 'nvp', $environment = 'sandbox' ) {
-		try {
-			if ( 'rest' === $client_type ) {
-				$settings = wc_gateway_ppec()->settings;
-				$old_environment = $settings->environment;
-				$settings->environment = $environment;
 
-				$credential = self::create_rest_credential( $settings );
-				$client = new WC_Gateway_PPEC_REST_Client( $credential, $environment );
-
-				// Test by getting access token
-				$token = $client->_get_access_token();
-
-				$settings->environment = $old_environment;
-
-				return ! empty( $token );
-			} else {
-				// Use existing NVP test method
-				$nvp_client = self::get_nvp_client();
-				return $nvp_client->test_api_credentials( self::create_nvp_credential( wc_gateway_ppec()->settings ), $environment );
-			}
-		} catch ( Exception $e ) {
-			return $e->getMessage();
-		}
-	}
 
 	/**
 	 * Clear cached client instances.
 	 */
 	public static function clear_cache() {
-		self::$_nvp_client = null;
 		self::$_rest_client = null;
 		self::$_rest_adapter = null;
 	}

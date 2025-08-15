@@ -55,27 +55,6 @@ function wc_gateway_ppec_add_rest_api_settings( $form_fields ) {
 			'desc'    => __( 'Get your Client Secret from PayPal Developer Console for sandbox environment.', 'woocommerce-gateway-paypal-express-checkout' ),
 			'default' => '',
 		),
-		
-		'rest_api_debug' => array(
-			'title'   => __( 'REST API Debug', 'woocommerce-gateway-paypal-express-checkout' ),
-			'type'    => 'checkbox',
-			'label'   => __( 'Enable detailed REST API logging', 'woocommerce-gateway-paypal-express-checkout' ),
-			'default' => 'no',
-			'desc'    => __( 'Log all REST API requests and responses for debugging. Only enable for troubleshooting.', 'woocommerce-gateway-paypal-express-checkout' ),
-		),
-		
-		'migration_mode' => array(
-			'title'   => __( 'Migration Mode', 'woocommerce-gateway-paypal-express-checkout' ),
-			'type'    => 'select',
-			'desc'    => __( 'Select migration strategy for transitioning from NVP to REST API.', 'woocommerce-gateway-paypal-express-checkout' ),
-			'default' => 'rest_only',
-			'options' => array(
-				'nvp_only'    => __( 'NVP Only (Legacy)', 'woocommerce-gateway-paypal-express-checkout' ),
-				'rest_only'   => __( 'REST API Only (Default)', 'woocommerce-gateway-paypal-express-checkout' ),
-				'hybrid'      => __( 'Hybrid (REST for new, NVP for existing)', 'woocommerce-gateway-paypal-express-checkout' ),
-				'rest_fallback' => __( 'REST with NVP Fallback', 'woocommerce-gateway-paypal-express-checkout' ),
-			),
-		),
 	);
 	
 	// Insert REST API fields after the debug field
@@ -231,19 +210,6 @@ class WC_Gateway_PPEC_Settings_REST extends WC_Gateway_PPEC_Settings {
 	 */
 	public $client_secret_sandbox;
 	
-	/**
-	 * REST API debug mode.
-	 *
-	 * @var bool
-	 */
-	public $rest_api_debug;
-	
-	/**
-	 * Migration mode.
-	 *
-	 * @var string
-	 */
-	public $migration_mode;
 	
 	/**
 	 * Load settings from database.
@@ -259,8 +225,6 @@ class WC_Gateway_PPEC_Settings_REST extends WC_Gateway_PPEC_Settings {
 		$this->client_secret_live = $this->client_secret ?? '';
 		$this->client_id_sandbox = $this->sandbox_client_id ?? '';
 		$this->client_secret_sandbox = $this->sandbox_client_secret ?? '';
-		$this->rest_api_debug = 'yes' === ( $this->rest_api_debug ?? 'yes' );
-		$this->migration_mode = $this->migration_mode ?? 'rest_only';
 	}
 	
 	/**
@@ -302,25 +266,7 @@ class WC_Gateway_PPEC_Settings_REST extends WC_Gateway_PPEC_Settings {
 		if ( ! $this->use_rest_api ) {
 			return false;
 		}
-		
-		switch ( $this->migration_mode ) {
-			case 'nvp_only':
-				return false;
-				
-			case 'rest_only':
-				return true;
-				
-			case 'hybrid':
-				// Use REST for new orders, NVP for existing operations
-				return in_array( $context, array( 'new_order', 'create_order' ), true );
-				
-			case 'rest_fallback':
-				// Try REST first, fall back to NVP on error
-				return true;
-				
-			default:
-				return false;
-		}
+		return true;
 	}
 	
 	/**

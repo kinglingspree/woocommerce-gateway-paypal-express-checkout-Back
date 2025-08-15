@@ -977,4 +977,76 @@ class WC_Gateway_PPEC_REST_Adapter {
 
 		return $status_map[ strtoupper( $rest_status ) ] ?? $rest_status;
 	}
+
+	/**
+	 * Test API credentials by attempting to get access token.
+	 * This provides compatibility with the NVP client's test_api_credentials method.
+	 *
+	 * @param WC_Gateway_PPEC_Client_Credential $credentials Credentials to test
+	 * @param string                            $environment Environment to test
+	 * @return string|false Payer ID on success, false on failure
+	 */
+	public function test_api_credentials( $credentials, $environment = 'sandbox' ) {
+		try {
+			// For REST API, we only support OAuth credentials (Client ID + Secret)
+			if ( ! is_a( $credentials, 'WC_Gateway_PPEC_Client_Credential_OAuth' ) ) {
+				error_log( '[PayPal Debug] test_api_credentials: Only OAuth credentials supported for REST API' );
+				return false;
+			}
+
+			// Create a temporary REST client with the provided credentials
+			$test_client = new WC_Gateway_PPEC_REST_Client( $credentials, $environment );
+			
+			// Try to make a simple API call to test credentials
+			// We'll try to get the client's own profile info or make a test call
+			$client_id = $credentials->get_username();
+			$client_secret = $credentials->get_password();
+			
+			$auth_url = ( 'live' === $environment ) 
+				? 'https://api.paypal.com/v1/oauth2/token' 
+				: 'https://api.sandbox.paypal.com/v1/oauth2/token';
+			
+			$headers = array(
+				'Accept'        => 'application/json',
+				'Accept-Language' => 'en_US',
+				'Authorization' => 'Basic ' . base64_encode( $client_id . ':' . $client_secret ),
+				'Content-Type'  => 'application/x-www-form-urlencoded',
+			);
+
+			$body = 'grant_type=client_credentials';
+
+			$args = array(
+				'method'  => 'POST',
+				'headers' => $headers,
+				'body'    => $body,
+				'timeout' => 30,
+			);
+
+			$response = wp_remote_request( $auth_url, $args );
+
+			if ( is_wp_error( $response ) ) {
+				error_log( '[PayPal Debug] test_api_credentials: Request failed - ' . $response->get_error_message() );
+				return false;
+			}
+
+			$status_code = wp_remote_retrieve_response_code( $response );
+			$response_body = wp_remote_retrieve_body( $response );
+
+			if ( 200 === $status_code ) {
+				$data = json_decode( $response_body, true );
+				if ( ! empty( $data['access_token'] ) ) {
+					// For REST API, we don't have a direct equivalent to payer_id
+					// Return a success indicator that mimics the NVP behavior
+					return 'REST_API_SUCCESS';
+				}
+			}
+			
+			error_log( '[PayPal Debug] test_api_credentials: Invalid response - Status: ' . $status_code . ', Body: ' . $response_body );
+			return false;
+			
+		} catch ( Exception $e ) {
+			error_log( '[PayPal Debug] test_api_credentials failed: ' . $e->getMessage() );
+			return false;
+		}
+	}
 }
