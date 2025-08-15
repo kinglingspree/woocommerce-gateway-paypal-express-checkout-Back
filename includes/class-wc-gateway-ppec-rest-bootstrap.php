@@ -80,10 +80,6 @@ class WC_Gateway_PPEC_REST_Bootstrap {
 			}
 		}
 
-		// Load test configuration in debug mode
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && file_exists( $includes_path . 'test-rest-config.php' ) ) {
-			require_once $includes_path . 'test-rest-config.php';
-		}
 	}
 
 	/**
