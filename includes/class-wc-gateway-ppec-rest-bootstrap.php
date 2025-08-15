@@ -235,7 +235,7 @@ class WC_Gateway_PPEC_REST_Bootstrap {
 			$('#woocommerce_ppec_paypal_use_rest_api').on('change', function() {
 				var restFields = $(this).closest('table').find('tr').filter(function() {
 					var id = $(this).find('input, select').attr('id') || '';
-					return id.includes('client_id') || id.includes('client_secret') || id.includes('migration_mode');
+					return id.includes('client_id') || id.includes('client_secret');
 				});
 				
 				if ($(this).is(':checked')) {

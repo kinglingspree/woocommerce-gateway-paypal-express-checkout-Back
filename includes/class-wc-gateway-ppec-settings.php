@@ -146,7 +146,6 @@ class WC_Gateway_PPEC_Settings {
 		
 		// Force REST API v2 to be enabled by default (plugin now uses REST API only)
 		$this->_settings['use_rest_api'] = 'yes';
-		$this->_settings['migration_mode'] = 'rest_only';
 		
 		$this->_is_setting_loaded   = true;
 		return $this;
