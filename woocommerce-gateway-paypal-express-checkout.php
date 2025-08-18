@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-define( 'WC_GATEWAY_PPEC_VERSION', '2.0.0' );
+define( 'WC_GATEWAY_PPEC_VERSION', '2.1.0' );
 
 /**
  * Return instance of WC_Gateway_PPEC_Plugin.
@@ -47,3 +47,8 @@ function wc_gateway_ppec() {
 }
 
 wc_gateway_ppec()->maybe_run();
+
+// Load REST API v2 integration
+if ( file_exists( dirname( __FILE__ ) . '/includes/class-wc-gateway-ppec-rest-bootstrap.php' ) ) {
+	require_once dirname( __FILE__ ) . '/includes/class-wc-gateway-ppec-rest-bootstrap.php';
+}
