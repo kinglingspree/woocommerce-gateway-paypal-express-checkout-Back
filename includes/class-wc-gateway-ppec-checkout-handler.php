@@ -669,7 +669,19 @@ class WC_Gateway_PPEC_Checkout_Handler {
 		}
 
 		$session = WC()->session->paypal;
-		return ( is_a( $session, 'WC_Gateway_PPEC_Session_Data' ) && ( $session->payer_id || ! empty( $session->create_billing_agreement ) ) && $session->expiry_time > time() );
+		$is_valid_session = is_a( $session, 'WC_Gateway_PPEC_Session_Data' ) && $session->expiry_time > time();
+		
+		if ( ! $is_valid_session ) {
+			return false;
+		}
+		
+		// For REST API, we don't require payer_id as it's associated with the order
+		if ( $this->is_using_rest_api() ) {
+			return true;
+		}
+		
+		// For NVP API, we need either payer_id or billing agreement
+		return ( $session->payer_id || ! empty( $session->create_billing_agreement ) );
 	}
 
 	/**
@@ -902,7 +914,11 @@ class WC_Gateway_PPEC_Checkout_Handler {
 	public function do_payment( $order, $token, $payer_id ) {
 		$session_data = WC()->session->get( 'paypal', null );
 
-		if ( ! $order || null === $session_data || $this->session_has_expired( $token ) || empty( $payer_id ) ) {
+		// Check if we're using REST API (payer_id is optional for REST API v2)
+		$using_rest_api = $this->is_using_rest_api();
+		$payer_id_required = ! $using_rest_api && empty( $payer_id );
+
+		if ( ! $order || null === $session_data || $this->session_has_expired( $token ) || $payer_id_required ) {
 			throw new PayPal_Missing_Session_Exception();
 		}
 
@@ -1180,5 +1196,27 @@ class WC_Gateway_PPEC_Checkout_Handler {
 			wp_safe_redirect( $redirect_url );
 			exit;
 		}
+	}
+
+	/**
+	 * Check if we're currently using REST API v2.
+	 *
+	 * @return bool True if using REST API v2, false otherwise
+	 */
+	protected function is_using_rest_api() {
+		$settings = wc_gateway_ppec()->settings;
+		
+		// Check if REST API settings are available and enabled
+		if ( method_exists( $settings, 'get_option' ) ) {
+			return 'yes' === $settings->get_option( 'use_rest_api', 'no' );
+		}
+		
+		// Fallback: check if we're using REST client factory
+		if ( class_exists( 'WC_Gateway_PPEC_Client_Factory' ) ) {
+			$client = WC_Gateway_PPEC_Client_Factory::get_client();
+			return is_a( $client, 'WC_Gateway_PPEC_REST_Adapter' );
+		}
+		
+		return false;
 	}
 }
