@@ -453,6 +453,23 @@ class WC_Gateway_PPEC_REST_Client {
 			$order_data['payment_source']['paypal']['experience_context']['landing_page'] = $landing_page === 'billing' ? 'BILLING' : 'LOGIN';
 		}
 
+		// Set shipping preference based on NOSHIPPING parameter and available shipping address
+		$has_shipping_address = ! empty( $nvp_params['SHIPTONAME'] ) || ! empty( $nvp_params['SHIPTOSTREET'] ) || 
+		                        ! empty( $nvp_params['PAYMENTREQUEST_0_SHIPTONAME'] ) || ! empty( $nvp_params['PAYMENTREQUEST_0_SHIPTOSTREET'] );
+		
+		if ( isset( $nvp_params['NOSHIPPING'] ) ) {
+			if ( $nvp_params['NOSHIPPING'] == 1 ) {
+				// No shipping needed
+				$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'NO_SHIPPING';
+			} elseif ( $has_shipping_address ) {
+				// Shipping needed and we have address - use provided address
+				$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'SET_PROVIDED_ADDRESS';
+			} else {
+				// Shipping needed but no address provided - get from PayPal file
+				$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'GET_FROM_FILE';
+			}
+		}
+
 		// Build purchase unit
 		$purchase_unit = array(
 			'reference_id' => 'default',
@@ -503,34 +520,47 @@ class WC_Gateway_PPEC_REST_Client {
 			$purchase_unit['items'] = $items;
 		}
 
-		// Add shipping address if provided
-		if ( ! empty( $nvp_params['SHIPTONAME'] ) || ! empty( $nvp_params['SHIPTOSTREET'] ) ) {
+		// Add shipping address if provided (check both SHIPTO and PAYMENTREQUEST_0_SHIPTO formats)
+		$shipto_name = $nvp_params['SHIPTONAME'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTONAME'] ?? '';
+		$shipto_street = $nvp_params['SHIPTOSTREET'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTOSTREET'] ?? '';
+		
+		if ( ! empty( $shipto_name ) || ! empty( $shipto_street ) ) {
 			$shipping = array();
 			
-			if ( ! empty( $nvp_params['SHIPTONAME'] ) ) {
+			if ( ! empty( $shipto_name ) ) {
 				$shipping['name'] = array(
-					'full_name' => $nvp_params['SHIPTONAME'],
+					'full_name' => $shipto_name,
 				);
 			}
 
 			$address = array();
-			if ( ! empty( $nvp_params['SHIPTOSTREET'] ) ) {
-				$address['address_line_1'] = $nvp_params['SHIPTOSTREET'];
+			if ( ! empty( $shipto_street ) ) {
+				$address['address_line_1'] = $shipto_street;
 			}
-			if ( ! empty( $nvp_params['SHIPTOSTREET2'] ) ) {
-				$address['address_line_2'] = $nvp_params['SHIPTOSTREET2'];
+			
+			$shipto_street2 = $nvp_params['SHIPTOSTREET2'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTOSTREET2'] ?? '';
+			if ( ! empty( $shipto_street2 ) ) {
+				$address['address_line_2'] = $shipto_street2;
 			}
-			if ( ! empty( $nvp_params['SHIPTOCITY'] ) ) {
-				$address['admin_area_2'] = $nvp_params['SHIPTOCITY'];
+			
+			$shipto_city = $nvp_params['SHIPTOCITY'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTOCITY'] ?? '';
+			if ( ! empty( $shipto_city ) ) {
+				$address['admin_area_2'] = $shipto_city;
 			}
-			if ( ! empty( $nvp_params['SHIPTOSTATE'] ) ) {
-				$address['admin_area_1'] = $nvp_params['SHIPTOSTATE'];
+			
+			$shipto_state = $nvp_params['SHIPTOSTATE'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTOSTATE'] ?? '';
+			if ( ! empty( $shipto_state ) ) {
+				$address['admin_area_1'] = $shipto_state;
 			}
-			if ( ! empty( $nvp_params['SHIPTOZIP'] ) ) {
-				$address['postal_code'] = $nvp_params['SHIPTOZIP'];
+			
+			$shipto_zip = $nvp_params['SHIPTOZIP'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTOZIP'] ?? '';
+			if ( ! empty( $shipto_zip ) ) {
+				$address['postal_code'] = $shipto_zip;
 			}
-			if ( ! empty( $nvp_params['SHIPTOCOUNTRYCODE'] ) ) {
-				$address['country_code'] = $nvp_params['SHIPTOCOUNTRYCODE'];
+			
+			$shipto_country = $nvp_params['SHIPTOCOUNTRYCODE'] ?? $nvp_params['PAYMENTREQUEST_0_SHIPTOCOUNTRYCODE'] ?? '';
+			if ( ! empty( $shipto_country ) ) {
+				$address['country_code'] = $shipto_country;
 			}
 
 			if ( ! empty( $address ) ) {

@@ -673,9 +673,14 @@ class WC_Gateway_PPEC_Checkout_Handler {
 			return false;
 		}
 		
-		// For REST API, we don't require payer_id as it's associated with the order
+		// For REST API, we need to check if payment has been authorized/confirmed
+		// Only lock checkout fields after customer returns from PayPal
 		if ( $this->is_using_rest_api() ) {
-			return true;
+			error_log( '[PayPal Debug] WARNING: has_active_session() ' . (isset($_GET['token']) ? $_GET['token'] : '') . ' ' . ($session->order_id ?? '') . ' ' . ($session->payer_id ?? '') );
+
+			// Check if we have payment confirmation from PayPal (payer_id means user completed PayPal flow)
+			// This ensures checkout fields are only locked after PayPal redirect
+			return ! empty( $session->payer_id ) || ! empty( $_GET['token'] );
 		}
 		
 		// For NVP API, we need either payer_id or billing agreement

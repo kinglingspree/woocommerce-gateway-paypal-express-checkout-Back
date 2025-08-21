@@ -115,11 +115,73 @@ class WC_Gateway_PPEC_Parameter_Mapper {
 					$nvp_response['PAYMENTREQUEST_0_SHIPTOCOUNTRYCODE'] = $address['country_code'] ?? null;
 					$nvp_response['PAYMENTREQUEST_0_SHIPTOCOUNTRYNAME'] = null;
 				}
+			} else {
+				// Fallback: If no shipping info from PayPal but cart needs shipping, 
+				// use customer's shipping address from WooCommerce session
+				if ( function_exists( 'WC' ) && WC()->customer && WC_Gateway_PPEC_Plugin::needs_shipping() ) {
+					$customer = WC()->customer;
+					$shipping_address_1 = $customer->get_shipping_address();
+					$shipping_address_2 = $customer->get_shipping_address_2();
+					$shipping_city = $customer->get_shipping_city();
+					$shipping_state = $customer->get_shipping_state();
+					$shipping_postcode = $customer->get_shipping_postcode();
+					$shipping_country = $customer->get_shipping_country();
+					
+					if ( $shipping_address_1 || $shipping_city ) {
+						$shipping_first_name = version_compare( WC_VERSION, '3.0', '<' ) ? 
+							$customer->shipping_first_name : $customer->get_shipping_first_name();
+						$shipping_last_name = version_compare( WC_VERSION, '3.0', '<' ) ? 
+							$customer->shipping_last_name : $customer->get_shipping_last_name();
+						$full_name = trim( $shipping_first_name . ' ' . $shipping_last_name );
+						
+						$nvp_response['SHIPTONAME'] = $full_name ?: null;
+						$nvp_response['SHIPTOSTREET'] = $shipping_address_1 ?: null;
+						$nvp_response['SHIPTOSTREET2'] = $shipping_address_2 ?: null;
+						$nvp_response['SHIPTOCITY'] = $shipping_city ?: null;
+						$nvp_response['SHIPTOSTATE'] = $shipping_state ?: null;
+						$nvp_response['SHIPTOZIP'] = $shipping_postcode ?: null;
+						$nvp_response['SHIPTOCOUNTRYCODE'] = $shipping_country ?: null;
+						
+						// Duplicate for PAYMENTREQUEST_0_
+						$nvp_response['PAYMENTREQUEST_0_SHIPTONAME'] = $full_name ?: null;
+						$nvp_response['PAYMENTREQUEST_0_SHIPTOSTREET'] = $shipping_address_1 ?: null;
+						$nvp_response['PAYMENTREQUEST_0_SHIPTOSTREET2'] = $shipping_address_2 ?: null;
+						$nvp_response['PAYMENTREQUEST_0_SHIPTOCITY'] = $shipping_city ?: null;
+						$nvp_response['PAYMENTREQUEST_0_SHIPTOSTATE'] = $shipping_state ?: null;
+						$nvp_response['PAYMENTREQUEST_0_SHIPTOZIP'] = $shipping_postcode ?: null;
+						$nvp_response['PAYMENTREQUEST_0_SHIPTOCOUNTRYCODE'] = $shipping_country ?: null;
+					}
+				}
 			}
 
 			// Payee information
 			if ( ! empty( $unit['payee'] ) ) {
 				$nvp_response['PAYMENTREQUEST_0_SELLERPAYPALACCOUNTID'] = $unit['payee']['email_address'] ?? null;
+			}
+
+			// Map billing address from shipping address if available and needed
+			// In REST API v2, PayPal typically doesn't provide separate billing address
+			// Only map if WooCommerce requires billing address for Express Checkout
+			$should_map_billing = false;
+			if ( function_exists( 'wc_gateway_ppec' ) ) {
+				$settings = wc_gateway_ppec()->settings;
+				// Only map billing address if "require billing address" is enabled in settings
+				$should_map_billing = 'yes' === $settings->require_billing;
+			}
+			
+			if ( $should_map_billing && ! empty( $unit['shipping']['address'] ) ) {
+				$address = $unit['shipping']['address'];
+				$full_name = $unit['shipping']['name']['full_name'] ?? '';
+				
+				// Map billing address fields
+				$nvp_response['BILLTONAME'] = $full_name;
+				$nvp_response['STREET'] = $address['address_line_1'] ?? null;
+				$nvp_response['STREET2'] = $address['address_line_2'] ?? null;
+				$nvp_response['CITY'] = $address['admin_area_2'] ?? null;
+				$nvp_response['STATE'] = $address['admin_area_1'] ?? null;
+				$nvp_response['ZIP'] = $address['postal_code'] ?? null;
+				$nvp_response['COUNTRYCODE'] = $address['country_code'] ?? null;
+				$nvp_response['COUNTRYNAME'] = null; // No direct mapping
 			}
 
 			// Breakdown amounts
