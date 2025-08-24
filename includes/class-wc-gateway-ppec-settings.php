@@ -143,18 +143,22 @@ class WC_Gateway_PPEC_Settings {
 		}
 		$this->_settings            = (array) get_option( 'woocommerce_ppec_paypal_settings', array() );
 		$this->_settings['use_spb'] = ! apply_filters( 'woocommerce_paypal_express_checkout_disable_smart_payment_buttons', false, $this ) ? 'yes' : 'no';
+		
+		// Force REST API v2 to be enabled by default (plugin now uses REST API only)
+		$this->_settings['use_rest_api'] = 'yes';
+		
 		$this->_is_setting_loaded   = true;
 		return $this;
 	}
 
 	/**
-	 * Load settings from DB.
+	 * Check if REST API v2 should be used.
+	 * Always returns true as this plugin now uses REST API v2 by default.
 	 *
-	 * @deprecated
+	 * @return bool
 	 */
-	public function load_settings( $force_reload = false ) {
-		_deprecated_function( __METHOD__, '1.2.0', 'WC_Gateway_PPEC_Settings::load' );
-		return $this->load( $force_reload );
+	public function should_use_rest_api() {
+		return true; // Always use REST API v2
 	}
 
 	/**

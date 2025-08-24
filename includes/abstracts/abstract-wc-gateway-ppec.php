@@ -279,95 +279,58 @@ abstract class WC_Gateway_PPEC extends WC_Payment_Gateway {
 	 */
 	protected function validate_active_credentials() {
 		$settings = wc_gateway_ppec()->settings->load( true );
-		$creds    = $settings->get_active_api_credentials();
-
-		$has_username   = (bool) $creds->get_username();
-		$has_password   = (bool) $creds->get_password();
-		$has_credential = is_a( $creds, 'WC_Gateway_PPEC_Client_Credential_Signature' ) ? (bool) $creds->get_signature() : (bool) $creds->get_certificate();
-		$errors         = array();
-
-		// Attempt to validate the credentials if any one of them has been set.
-		if ( ! $has_username && ! $has_password && ! $has_credential ) {
+		
+		// Since we're now using REST API exclusively, we need to validate REST credentials
+		$environment = $settings->get_environment();
+		$errors = array();
+		
+		// Get REST API credentials
+		if ( 'live' === $environment ) {
+			$client_id = $settings->client_id ?? '';
+			$client_secret = $settings->client_secret ?? '';
+		} else {
+			$client_id = $settings->sandbox_client_id ?? '';
+			$client_secret = $settings->sandbox_client_secret ?? '';
+		}
+		
+		// Check if credentials are set
+		$has_client_id = ! empty( $client_id );
+		$has_client_secret = ! empty( $client_secret );
+		
+		// If no credentials are set at all, skip validation
+		if ( ! $has_client_id && ! $has_client_secret ) {
 			return;
 		}
-
-		if ( ! $has_username ) {
-			$errors[] = __( 'Error: You must enter API username.', 'woocommerce-gateway-paypal-express-checkout' );
+		
+		// Validate that both client ID and secret are provided
+		if ( ! $has_client_id ) {
+			$errors[] = esc_html__( 'Error: You must enter Client ID for REST API.', 'woocommerce-gateway-paypal-express-checkout' );
 		}
-
-		if ( ! $has_password ) {
-			$errors[] = __( 'Error: You must enter API password.', 'woocommerce-gateway-paypal-express-checkout' );
+		
+		if ( ! $has_client_secret ) {
+			$errors[] = esc_html__( 'Error: You must enter Client Secret for REST API.', 'woocommerce-gateway-paypal-express-checkout' );
 		}
-
-		if ( ! $has_credential ) {
-			$errors[] = __( 'Error: You must provide API signature or certificate.', 'woocommerce-gateway-paypal-express-checkout' );
-		}
-
-		// Only attempt to validate the credential (signature or cert), if all fields are set.
-		if ( $has_username && $has_password && $has_credential ) {
-			if ( is_a( $creds, 'WC_Gateway_PPEC_Client_Credential_Signature' ) ) {
-				try {
-					$payer_id = wc_gateway_ppec()->client->test_api_credentials( $creds, $settings->get_environment() );
-
-					if ( ! $payer_id ) {
-						$errors[] = __( 'Error: The API credentials you provided are not valid.  Please double-check that you entered them correctly and try again.', 'woocommerce-gateway-paypal-express-checkout' );
-					}
-				} catch ( PayPal_API_Exception $ex ) {
-
-					$errors[] = __( 'An error occurred while trying to validate your API credentials. Unable to verify that your API credentials are correct.', 'woocommerce-gateway-paypal-express-checkout' );
-				}
-			} elseif ( is_a( $creds, 'WC_Gateway_PPEC_Client_Credential_Certificate' ) ) {
-
-				$cert = @openssl_x509_read( $creds->get_certificate() ); // @codingStandardsIgnoreLine
-
-				if ( false === $cert ) {
-					$errors[] = __( 'Error: The API certificate is not valid.', 'woocommerce-gateway-paypal-express-checkout' );
-				}
-
-				$cert_info   = openssl_x509_parse( $cert );
-				$valid_until = $cert_info['validTo_time_t'];
-
-				if ( $valid_until < time() ) {
-					$errors[] = __( 'Error: The API certificate has expired.', 'woocommerce-gateway-paypal-express-checkout' );
-				} elseif ( $cert_info['subject']['CN'] !== $creds->get_username() ) {
-					$errors[] = __( 'Error: The API username does not match the name in the API certificate. Make sure that you have the correct API certificate.', 'woocommerce-gateway-paypal-express-checkout' );
-				}
-
-				try {
-					$payer_id = wc_gateway_ppec()->client->test_api_credentials( $creds, $settings->get_environment() );
-
-					if ( ! $payer_id ) {
-						$errors[] = __( 'Error: The API credentials you provided are not valid.  Please double-check that you entered them correctly and try again.', 'woocommerce-gateway-paypal-express-checkout' );
-					}
-				} catch ( PayPal_API_Exception $ex ) {
-					$errors[] = __( 'An error occurred while trying to validate your API credentials.  Unable to verify that your API credentials are correct.', 'woocommerce-gateway-paypal-express-checkout' );
-				}
-			}
-		}
-
-		$settings_array = (array) get_option( 'woocommerce_ppec_paypal_settings', array() );
-
-		if ( 'yes' === $settings_array['require_billing'] ) {
-			$is_account_enabled_for_billing_address = false;
-
+		
+		// Only attempt to validate credentials if both are set
+		if ( $has_client_id && $has_client_secret ) {
 			try {
-				$is_account_enabled_for_billing_address = wc_gateway_ppec()->client->test_for_billing_address_enabled( $creds, $settings->get_environment() );
-			} catch ( PayPal_API_Exception $ex ) {
-				$is_account_enabled_for_billing_address = false;
-			}
-
-			if ( ! $is_account_enabled_for_billing_address ) {
-				$settings_array['require_billing'] = 'no';
-				update_option( 'woocommerce_ppec_paypal_settings', $settings_array );
-				$errors[] = __( 'The "require billing address" option is not enabled by your account and has been disabled.', 'woocommerce-gateway-paypal-express-checkout' );
+				// Create OAuth credentials for testing
+				$oauth_creds = new WC_Gateway_PPEC_Client_Credential_OAuth( $client_id, $client_secret );
+				$result = wc_gateway_ppec()->client->test_api_credentials( $oauth_creds, $environment );
+				
+				if ( ! $result ) {
+					$errors[] = esc_html__( 'Error: The REST API credentials you provided are not valid. Please double-check that you entered them correctly and try again.', 'woocommerce-gateway-paypal-express-checkout' );
+				}
+			} catch ( Exception $ex ) {
+				$errors[] = esc_html__( 'An error occurred while trying to validate your REST API credentials. Unable to verify that your API credentials are correct.', 'woocommerce-gateway-paypal-express-checkout' );
 			}
 		}
-
+		
+		// Display errors if any
 		if ( ! empty( $errors ) ) {
-			foreach ( $errors as $message ) {
-				WC_Admin_Settings::add_error( $message );
+			foreach ( $errors as $error ) {
+				WC_Admin_Settings::add_error( $error );
 			}
-			return false;
 		}
 	}
 

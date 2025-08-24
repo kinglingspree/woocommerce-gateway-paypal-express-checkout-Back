@@ -493,7 +493,7 @@ class WC_Gateway_PPEC_Cart_Handler {
 				'wc-gateway-ppec-frontend-in-context-checkout',
 				'wc_ppec_context',
 				array(
-					'payer_id'                    => $client->get_payer_id(),
+					'payer_id'                    => '', // Not used in REST API v2
 					'environment'                 => $settings->get_environment(),
 					'locale'                      => $settings->get_paypal_locale(),
 					'start_flow'                  => esc_url( add_query_arg( array( 'startcheckout' => 'true' ), wc_get_page_permalink( 'cart' ) ) ),
@@ -545,12 +545,10 @@ class WC_Gateway_PPEC_Cart_Handler {
 			if ( ! $settings->use_legacy_checkout_js() ) {
 				$script_args = array(
 					'client-id'   => $settings->get_active_rest_client_id(),
-					'merchant-id' => $client->get_payer_id(),
+					//'merchant-id' => $client->get_payer_id(), // Not needed in REST API v2
 					'intent'      => 'authorization' === $settings->get_paymentaction() ? 'authorize' : 'capture',
 					'locale'      => $settings->get_paypal_locale(),
-					'components'  => 'buttons,funding-eligibility',
-					'commit'      => 'checkout' === $page ? 'true' : 'false',
-					'currency'    => get_woocommerce_currency(),
+					'components'  => 'buttons,funding-eligibility,messages',
 				);
 
 				$script_args = apply_filters( 'woocommerce_paypal_express_checkout_sdk_script_args', $script_args, $settings, $client );
