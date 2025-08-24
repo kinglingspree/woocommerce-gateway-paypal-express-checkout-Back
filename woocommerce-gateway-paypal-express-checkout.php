@@ -27,7 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Exit if accessed directly
 }
 
-define( 'WC_GATEWAY_PPEC_VERSION', '2.1.0' );
+define( 'WC_GATEWAY_PPEC_VERSION', '2.0.0' );
 
 /**
  * Return instance of WC_Gateway_PPEC_Plugin.
