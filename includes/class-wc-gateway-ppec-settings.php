@@ -161,6 +161,17 @@ class WC_Gateway_PPEC_Settings {
 		return true; // Always use REST API v2
 	}
 
+		/**
+	 * Load settings from DB.
+	 *
+	 * @deprecated
+	 */
+	public function load_settings( $force_reload = false ) {
+		_deprecated_function( __METHOD__, '1.2.0', 'WC_Gateway_PPEC_Settings::load' );
+		return $this->load( $force_reload );
+	}
+
+
 	/**
 	 * Save current settings.
 	 *
