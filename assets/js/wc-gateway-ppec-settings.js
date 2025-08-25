@@ -180,8 +180,8 @@
 	// Handle gateway settings.
 	$( function() {
 		var ppec_mark_fields      = '#woocommerce_ppec_paypal_title, #woocommerce_ppec_paypal_description';
-		var ppec_live_fields      = '#woocommerce_ppec_paypal_api_username, #woocommerce_ppec_paypal_api_password, #woocommerce_ppec_paypal_api_signature, #woocommerce_ppec_paypal_api_certificate, #woocommerce_ppec_paypal_api_subject';
-		var ppec_sandbox_fields   = '#woocommerce_ppec_paypal_sandbox_api_username, #woocommerce_ppec_paypal_sandbox_api_password, #woocommerce_ppec_paypal_sandbox_api_signature, #woocommerce_ppec_paypal_sandbox_api_certificate, #woocommerce_ppec_paypal_sandbox_api_subject';
+		var ppec_live_fields      = '#woocommerce_ppec_paypal_api_username, #woocommerce_ppec_paypal_api_password, #woocommerce_ppec_paypal_api_signature, #woocommerce_ppec_paypal_api_certificate, #woocommerce_ppec_paypal_api_subject, #woocommerce_ppec_paypal_client_id, #woocommerce_ppec_paypal_client_secret';
+		var ppec_sandbox_fields   = '#woocommerce_ppec_paypal_sandbox_api_username, #woocommerce_ppec_paypal_sandbox_api_password, #woocommerce_ppec_paypal_sandbox_api_signature, #woocommerce_ppec_paypal_sandbox_api_certificate, #woocommerce_ppec_paypal_sandbox_api_subject, #woocommerce_ppec_paypal_sandbox_client_id, #woocommerce_ppec_paypal_sandbox_client_secret';
 
 		var enable_toggle         = $( 'a.ppec-toggle-settings' ).length > 0;
 		var enable_sandbox_toggle = $( 'a.ppec-toggle-sandbox-settings' ).length > 0;
@@ -191,10 +191,16 @@
 
 		$( '#woocommerce_ppec_paypal_environment' ).on( 'change', function(){
 			$( ppec_sandbox_fields + ',' + ppec_live_fields ).closest( 'tr' ).hide();
+			
+			// Hide all REST API credential fields first
+			$( '.ppec-live-credentials, .ppec-sandbox-credentials' ).closest( 'tr' ).hide();
 
 			if ( 'live' === $( this ).val() ) {
 				$( '#woocommerce_ppec_paypal_api_credentials, #woocommerce_ppec_paypal_api_credentials + p' ).show();
 				$( '#woocommerce_ppec_paypal_sandbox_api_credentials, #woocommerce_ppec_paypal_sandbox_api_credentials + p' ).hide();
+				
+				// Show live REST API credential fields
+				$( '.ppec-live-credentials' ).closest( 'tr' ).show();
 
 				if ( ! enable_toggle ) {
 					$( ppec_live_fields ).closest( 'tr' ).show();
@@ -202,6 +208,9 @@
 			} else {
 				$( '#woocommerce_ppec_paypal_api_credentials, #woocommerce_ppec_paypal_api_credentials + p' ).hide();
 				$( '#woocommerce_ppec_paypal_sandbox_api_credentials, #woocommerce_ppec_paypal_sandbox_api_credentials + p' ).show();
+				
+				// Show sandbox REST API credential fields
+				$( '.ppec-sandbox-credentials' ).closest( 'tr' ).show();
 
 				if ( ! enable_sandbox_toggle ) {
 					$( ppec_sandbox_fields ).closest( 'tr' ).show();
