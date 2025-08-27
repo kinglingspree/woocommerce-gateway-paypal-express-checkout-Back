@@ -481,8 +481,8 @@ class WC_Gateway_PPEC_Cart_Handler {
 			wp_enqueue_script( 'paypal-checkout-js', 'https://www.paypalobjects.com/api/checkout.js', array(), null, true );
 			wp_enqueue_script( 'wc-gateway-ppec-frontend-in-context-checkout', wc_gateway_ppec()->plugin_url . 'assets/js/wc-gateway-ppec-frontend-in-context-checkout.js', array( 'jquery' ), wc_gateway_ppec()->version, true );
 			wp_localize_script( 'wc-gateway-ppec-frontend-in-context-checkout', 'wc_ppec_context',
-				array(
-					'payer_id'    => $client->get_payer_id(),
+								array(
+					'payer_id'    => '', // Not used in REST API v2
 					'environment' => $settings->get_environment(),
 					'locale'      => $settings->get_paypal_locale(),
 					'start_flow'  => esc_url( add_query_arg( array( 'startcheckout' => 'true' ), wc_get_page_permalink( 'cart' ) ) ),
@@ -535,11 +535,10 @@ class WC_Gateway_PPEC_Cart_Handler {
 			if ( ! $settings->use_legacy_checkout_js() ) {
 				$script_args = array(
 					'client-id'   => $settings->get_active_rest_client_id(),
-					'merchant-id' => $client->get_payer_id(),
+					//'merchant-id' => $client->get_payer_id(), // Not needed in REST API v2
+					'intent'      => 'authorization' === $settings->get_paymentaction() ? 'authorize' : 'capture',
 					'locale'      => $settings->get_paypal_locale(),
-					'components'  => 'buttons,funding-eligibility',
-					'commit'      => 'checkout' === $page ? 'true' : 'false',
-					'currency'    => get_woocommerce_currency(),
+					'components'  => 'buttons,funding-eligibility,messages',
 				);
 
 				wp_register_script( 'paypal-checkout-js', add_query_arg( $script_args, 'https://www.paypal.com/sdk/js' ), array(), null, true );
