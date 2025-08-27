@@ -52,6 +52,12 @@
 	display: none;
 }
 
+/* PayPal Express Checkout Settings Page Styles */
+.ppec-live-credentials,
+.ppec-sandbox-credentials {
+	/* Initial state will be controlled by JavaScript */
+}
+
 #payment .place-order .button {
 	display: block;
 }
