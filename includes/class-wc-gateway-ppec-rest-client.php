@@ -617,7 +617,6 @@ class WC_Gateway_PPEC_REST_Client {
 		$shipping_pref = $order_data['payment_source']['paypal']['experience_context']['shipping_preference'] ?? '';
 		if ( 'GET_FROM_FILE' === $shipping_pref && isset( $purchase_unit['shipping'] ) ) {
 			unset( $purchase_unit['shipping'] );
-     	    error_log( '[_convert_nvp_to_rest_order] ' . $shipping_pref );
 		}
 
 		$order_data['purchase_units'][] = $purchase_unit;
