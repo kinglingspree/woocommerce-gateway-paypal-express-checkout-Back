@@ -422,6 +422,38 @@ class WC_Gateway_PPEC_REST_Client {
 		return $this->_request( 'GET', '/v2/payments/authorizations/' . $authorization_id );
 	}
 
+
+	/**
+		* Check if shipping address meets PayPal REST API v2 requirements.
+		* Based on official PayPal documentation: Country and region address requirements
+		*
+		* @param array $nvp_params NVP parameters
+		* @return bool True if shipping address is complete enough
+	*/
+	protected function _is_shipping_address_complete( array $nvp_params ) {
+	$country_code = strtoupper( $nvp_params['PAYMENTREQUEST_0_SHIPTOCOUNTRYCODE'] ?? '' );
+	$city = $nvp_params['PAYMENTREQUEST_0_SHIPTOCITY'] ?? '';
+	$postal_code = $nvp_params['PAYMENTREQUEST_0_SHIPTOZIP'] ?? '';
+
+	// Countries that require postal code according to PayPal Orders v2 API documentation
+	$countries_requiring_postal_code = array(
+	'AR', 'AU', 'AT', 'BT', 'BR', 'CA', 'C2', 'CN', 'CC', 'KM', 'DK', 'FK', 'FO', 'TF', 'FR', 'GM', 'DE', 
+	'GL', 'IT', 'JP', 'KI', 'KG', 'MR', 'YT', 'MX', 'NL', 'NR', 'NE', 'NU', 'NF', 'NO', 'PN', 'PL', 
+	'SM', 'SG', 'ES', 'SH', 'PM', 'SR', 'SJ', 'SE', 'CH', 'TH', 'TK', 'TV', 'GB', 'US', 'UM', 'VA', 
+	'WF', 'EH'
+	);
+
+	// Countries that do NOT require city (most require city, but these are exceptions)
+	$countries_not_requiring_city = array( 'HK', 'SG', 'JP' );
+
+	// Check basic requirements
+	$has_country = ! empty( $country_code );
+	$has_city = ! empty( $city ) || in_array( $country_code, $countries_not_requiring_city, true );
+	$has_postal_code_if_required = ! in_array( $country_code, $countries_requiring_postal_code, true ) || ! empty( $postal_code );
+
+	return $has_country && $has_city && $has_postal_code_if_required;
+	}  
+
 	/**
 	 * Convert NVP parameters to REST order structure.
 	 *
@@ -461,14 +493,22 @@ class WC_Gateway_PPEC_REST_Client {
 			if ( $nvp_params['NOSHIPPING'] == 1 ) {
 				// No shipping needed
 				$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'NO_SHIPPING';
-			} elseif ( $has_shipping_address ) {
+			} elseif ( $has_shipping_address && $this->_is_shipping_address_complete( $nvp_params ) ) {
 				// Shipping needed and we have address - use provided address
 				$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'SET_PROVIDED_ADDRESS';
 			} else {
 				// Shipping needed but no address provided - get from PayPal file
 				$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'GET_FROM_FILE';
 			}
-		}
+		} else {
+            // Default behavior: if we have shipping address, force use it
+			if ( $has_shipping_address && $this->_is_shipping_address_complete( $nvp_params ) ) {
+			    $order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'SET_PROVIDED_ADDRESS';
+			} else {
+		    	$order_data['payment_source']['paypal']['experience_context']['shipping_preference'] = 'GET_FROM_FILE';
+			}
+	    }
+
 
 		// Build purchase unit
 		$purchase_unit = array(
@@ -570,6 +610,14 @@ class WC_Gateway_PPEC_REST_Client {
 			if ( ! empty( $shipping ) ) {
 				$purchase_unit['shipping'] = $shipping;
 			}
+		}
+
+		// If PayPal will provide the shipping address from the buyer's file,
+		// do not include any shipping information in the purchase unit.
+		$shipping_pref = $order_data['payment_source']['paypal']['experience_context']['shipping_preference'] ?? '';
+		if ( 'GET_FROM_FILE' === $shipping_pref && isset( $purchase_unit['shipping'] ) ) {
+			unset( $purchase_unit['shipping'] );
+     	    error_log( '[_convert_nvp_to_rest_order] ' . $shipping_pref );
 		}
 
 		$order_data['purchase_units'][] = $purchase_unit;
